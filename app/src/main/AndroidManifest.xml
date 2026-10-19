@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- LOCATION PERMISSIONS -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- CONTACTS PERMISSION -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- SMS AUTO-REPLY -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+
+    <!-- CALENDAR PERMISSION -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+
+    <!-- CALENDAR DND AUTOMATION / DEVICE RESTART -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- DND / NOTIFICATION POLICY ACCESS -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+
+    <!-- NOTIFICATIONS -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- TELEPHONY: SMS FUNCTIONALITY IS OPTIONAL -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="Smart Silence"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SmartSilence">
+
+        <!-- MAIN ACTIVITY -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <!-- GEOFENCE RECEIVER -->
+        <receiver
+            android:name=".location.GeofenceBroadcastReceiver"
+            android:exported="false" />
+
+        <!-- CALL SCREENING SERVICE -->
+        <service
+            android:name=".SmartSilenceCallScreeningService"
+            android:permission="android.permission.BIND_SCREENING_SERVICE"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.telecom.CallScreeningService" />
+            </intent-filter>
+
+        </service>
+
+        <!-- CALENDAR DND RECEIVER -->
+        <receiver
+            android:name=".calendar.CalendarDndReceiver"
+            android:exported="false" />
+
+        <!-- TRUST DECISION RECEIVER -->
+        <receiver
+            android:name=".notification.TrustDecisionReceiver"
+            android:exported="false" />
+
+        <!-- GEOFENCE RE-REGISTRATION AFTER DEVICE RESTART -->
+        <receiver
+            android:name=".location.GeofenceBootReceiver"
+            android:enabled="true"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+
+        </receiver>
+
+    </application>
+
+</manifest>

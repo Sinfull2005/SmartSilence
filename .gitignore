@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+**/build/
+
+# Local machine configuration
+local.properties
+
+# IDE-specific workspace files
+.idea/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+
+# Kotlin and Python caches
+.kotlin/
+.venv/
+__pycache__/
+*.py[cod]
+venv/
+
+# Signing credentials
+*.jks
+*.keystore
+# Earlier Smart Silence project archives
+app/src/main/java/com/example/smartsilence.zip
+app/src/main/java/com/example/smartsilence/security.zip
