@@ -1,4 +1,8 @@
+
 package com.example.smartsilence
+
+import android.content.Context
+import android.content.SharedPreferences
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -19,9 +23,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import com.example.smartsilence.data.LocationEntity
 import com.example.smartsilence.location.SmartSilenceTTS
 import com.example.smartsilence.ui.theme.BackgroundNavy
 import com.example.smartsilence.ui.theme.ElectricBlue
@@ -40,389 +45,270 @@ import com.example.smartsilence.ui.theme.SurfaceNavyLight
 import com.example.smartsilence.ui.theme.TextPrimary
 import com.example.smartsilence.ui.theme.TextSecondary
 
-
-private val TextWhite =
-    Color(0xFFF5F7FF)
-
+private val TextWhite = Color(0xFFF5F7FF)
 
 @Composable
 fun HomeScreen(
-    onDndRuleChange: (() -> Unit) -> Unit
+    onDndRuleChange: (() -> Unit) -> Unit,
+    locations: List<LocationEntity>,
+    onAddLocationClick: () -> Unit,
+    onPriorityContactsClick: () -> Unit,
+    onTasksClick: () -> Unit
 ) {
+    val context = LocalContext.current
 
-    val context =
-        LocalContext.current
+    // =========================================================
+    // CURRENT SAVED LOCATION
+    // =========================================================
 
+    val geofencePreferences = remember(context) {
+        context.getSharedPreferences(
+            "smart_silence_geofence_state",
+            Context.MODE_PRIVATE
+        )
+    }
+
+    var activeGeofenceIds by remember(geofencePreferences) {
+        mutableStateOf(
+            geofencePreferences
+                .getStringSet("active_geofence_ids", emptySet())
+                ?.toSet()
+                ?: emptySet()
+        )
+    }
+
+    DisposableEffect(geofencePreferences) {
+        val listener =
+            SharedPreferences.OnSharedPreferenceChangeListener {
+                    preferences, key ->
+
+                if (key == "active_geofence_ids") {
+                    activeGeofenceIds =
+                        preferences
+                            ?.getStringSet(
+                                "active_geofence_ids",
+                                emptySet()
+                            )
+                            ?.toSet()
+                            ?: emptySet()
+                }
+            }
+
+        geofencePreferences.registerOnSharedPreferenceChangeListener(
+            listener
+        )
+
+        onDispose {
+            geofencePreferences
+                .unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
+    val currentSavedLocation = locations.firstOrNull { location ->
+        location.id.toString() in activeGeofenceIds
+    }
+
+    val locationDisplay = when {
+        currentSavedLocation != null ->
+            currentSavedLocation.name
+
+        locations.isEmpty() ->
+            "No saved locations"
+
+        else ->
+            "Outside saved locations"
+    }
 
     // =========================================================
     // TTS
     // =========================================================
 
-    val tts =
-        remember {
-            SmartSilenceTTS(
-                context
-            )
-        }
+    val tts = remember {
+        SmartSilenceTTS(context)
+    }
 
     DisposableEffect(Unit) {
-
         onDispose {
             tts.shutdown()
         }
     }
 
-
     // =========================================================
     // DND MANAGER
     // =========================================================
 
-    val dndManager =
-        remember {
-            DndManager(
-                context
-            )
-        }
+    val dndManager = remember {
+        DndManager(context)
+    }
 
     var dndEnabled by remember {
-        mutableStateOf(
-            dndManager.isDndEnabled()
-        )
+        mutableStateOf(dndManager.isDndEnabled())
     }
 
     var statusMessage by remember {
-
         mutableStateOf(
-
             if (dndEnabled)
-
                 "Do Not Disturb is currently active"
-
             else
-
                 "Do Not Disturb is currently inactive"
         )
     }
-
 
     // =========================================================
     // UI
     // =========================================================
 
     Column(
-
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(
-                    BackgroundNavy
-                )
-                .padding(
-                    horizontal = 20.dp,
-                    vertical = 18.dp
-                )
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundNavy)
+            .padding(
+                horizontal = 20.dp,
+                vertical = 18.dp
+            )
     ) {
-
 
         // =====================================================
         // HEADER
         // =====================================================
 
         Row(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            verticalAlignment =
-                Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-
             Column(
-                modifier =
-                    Modifier.weight(1f)
+                modifier = Modifier.weight(1f)
             ) {
-
                 Text(
-                    text =
-                        "SMART SILENCE",
-
-                    color =
-                        TextWhite,
-
-                    fontSize =
-                        26.sp,
-
-                    fontWeight =
-                        FontWeight.Bold
+                    text = "SMART SILENCE",
+                    color = TextWhite,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold
                 )
 
-                Spacer(
-                    modifier =
-                        Modifier.height(
-                            4.dp
-                        )
-                )
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text =
-                        "Context-aware notification management",
-
-                    color =
-                        TextSecondary,
-
-                    fontSize =
-                        13.sp
+                    text = "Context-aware notification management",
+                    color = TextSecondary,
+                    fontSize = 13.sp
                 )
             }
 
             Card(
-
-                shape =
-                    RoundedCornerShape(
-                        14.dp
-                    ),
-
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            SurfaceNavyDark
-                    )
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = SurfaceNavyDark
+                )
             ) {
-
                 Text(
-                    text =
-                        "◉",
-
-                    color =
-                        ElectricBlue,
-
-                    fontSize =
-                        22.sp,
-
-                    modifier =
-                        Modifier.padding(
-                            12.dp
-                        )
+                    text = "◉",
+                    color = ElectricBlue,
+                    fontSize = 22.sp,
+                    modifier = Modifier.padding(12.dp)
                 )
             }
         }
 
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    22.dp
-                )
-        )
-
+        Spacer(modifier = Modifier.height(22.dp))
 
         // =====================================================
         // DND STATUS
         // =====================================================
 
         Card(
-
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(
-                        175.dp
-                    ),
-
-            shape =
-                RoundedCornerShape(
-                    24.dp
-                ),
-
-            colors =
-                CardDefaults.cardColors(
-                    containerColor =
-                        SurfaceNavy
-                )
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(175.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = SurfaceNavy
+            )
         ) {
-
             Row(
-
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(
-                            22.dp
-                        ),
-
-                verticalAlignment =
-                    Alignment.CenterVertically
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(22.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Column(
-                    modifier =
-                        Modifier.weight(1f)
+                    modifier = Modifier.weight(1f)
                 ) {
+                    Text(
+                        text = "DND STATUS",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
-                        text =
-                            "DND STATUS",
-
-                        color =
-                            TextSecondary,
-
-                        fontSize =
-                            12.sp,
-
-                        fontWeight =
-                            FontWeight.Bold
+                        text = if (dndEnabled) "ACTIVE" else "INACTIVE",
+                        color = ElectricBlue,
+                        fontSize = 29.sp,
+                        fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(
-                        modifier =
-                            Modifier.height(
-                                10.dp
-                            )
-                    )
+                    Spacer(modifier = Modifier.height(7.dp))
 
                     Text(
-
-                        text =
-                            if (dndEnabled)
-
-                                "ACTIVE"
-
-                            else
-
-                                "INACTIVE",
-
-                        color =
-                            ElectricBlue,
-
-                        fontSize =
-                            29.sp,
-
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(
-                                7.dp
-                            )
-                    )
-
-                    Text(
-                        text =
-                            statusMessage,
-
-                        color =
-                            TextPrimary,
-
-                        fontSize =
-                            13.sp
+                        text = statusMessage,
+                        color = TextPrimary,
+                        fontSize = 13.sp
                     )
                 }
 
                 Card(
-
-                    shape =
-                        RoundedCornerShape(
-                            60.dp
-                        ),
-
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor =
-                                SurfaceNavyLight
-                        )
+                    shape = RoundedCornerShape(60.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = SurfaceNavyLight
+                    )
                 ) {
-
                     Box(
-
-                        modifier =
-                            Modifier.size(
-                                85.dp
-                            ),
-
-                        contentAlignment =
-                            Alignment.Center
+                        modifier = Modifier.size(85.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-
                         Text(
-                            text =
-                                "⌁",
-
-                            color =
-                                ElectricBlue,
-
-                            fontSize =
-                                38.sp
+                            text = "⌁",
+                            color = ElectricBlue,
+                            fontSize = 38.sp
                         )
                     }
                 }
             }
         }
 
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    16.dp
-                )
-        )
-
+        Spacer(modifier = Modifier.height(16.dp))
 
         // =====================================================
         // SMART SILENCE BUTTON
+        // Existing DND and authentication flow preserved
         // =====================================================
 
         Button(
-
             onClick = {
-
-                // =================================================
-                // DND ACCESS CHECK
-                // =================================================
-
-                if (
-                    !dndManager.hasDndAccess()
-                ) {
-
+                if (!dndManager.hasDndAccess()) {
                     dndManager.openDndSettings()
-
                     statusMessage =
                         "Please grant DND access in Android Settings."
-
                     return@Button
                 }
 
-
-                // =================================================
-                // PROTECTED DND RULE CHANGE
-                // =================================================
-
                 onDndRuleChange {
 
-                    // =================================================
-                    // DISABLE SMART SILENCE
-                    // =================================================
-
                     if (dndEnabled) {
-
-                        val disabled =
-                            dndManager.disableDnd()
+                        val disabled = dndManager.disableDnd()
 
                         if (disabled) {
-
-                            dndEnabled =
-                                false
-
+                            dndEnabled = false
                             statusMessage =
                                 "Do Not Disturb has been disabled."
 
                             tts.speak(
                                 "Do Not Disturb has been disabled."
                             )
-
                         } else {
-
                             statusMessage =
                                 "Unable to disable Do Not Disturb."
                         }
@@ -430,263 +316,130 @@ fun HomeScreen(
                         return@onDndRuleChange
                     }
 
-
-                    // =================================================
-                    // ENABLE SMART SILENCE
-                    // =================================================
-
-                    statusMessage =
-                        "Smart Silence is enabling..."
-
-
-                    /*
-                     * IMPORTANT:
-                     *
-                     * DND can suppress audio streams.
-                     *
-                     * Therefore the acknowledgement is spoken FIRST.
-                     *
-                     * DND is enabled only after TTS reports that the
-                     * acknowledgement has finished.
-                     */
+                    statusMessage = "Smart Silence is enabling..."
 
                     tts.speak(
-
                         "Do Not Disturb has been enabled.",
-
                         onDone = {
-
-                            val enabled =
-                                dndManager.enableDnd()
+                            val enabled = dndManager.enableDnd()
 
                             if (enabled) {
-
-                                dndEnabled =
-                                    true
-
+                                dndEnabled = true
                                 statusMessage =
                                     "Do Not Disturb has been enabled."
-
                             } else {
-
-                                dndEnabled =
-                                    dndManager.isDndEnabled()
+                                dndEnabled = dndManager.isDndEnabled()
 
                                 statusMessage =
-
                                     if (dndEnabled)
-
                                         "Do Not Disturb has been enabled."
-
                                     else
-
                                         "Unable to enable Do Not Disturb."
                             }
                         }
                     )
                 }
             },
-
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(
-                        54.dp
-                    ),
-
-            shape =
-                RoundedCornerShape(
-                    18.dp
-                ),
-
-            colors =
-                ButtonDefaults.buttonColors(
-
-                    containerColor =
-                        ElectricBlue,
-
-                    contentColor =
-                        TextWhite
-                )
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp),
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = ElectricBlue,
+                contentColor = TextWhite
+            )
         ) {
-
             Text(
-
-                text =
-                    if (dndEnabled)
-
-                        "DISABLE SMART SILENCE"
-
-                    else
-
-                        "ENABLE SMART SILENCE",
-
-                fontWeight =
-                    FontWeight.Bold
+                text = if (dndEnabled)
+                    "DISABLE SMART SILENCE"
+                else
+                    "ENABLE SMART SILENCE",
+                fontWeight = FontWeight.Bold
             )
         }
 
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    22.dp
-                )
-        )
-
+        Spacer(modifier = Modifier.height(22.dp))
 
         // =====================================================
         // CURRENT CONTEXT
+        // Activity card removed
         // =====================================================
 
         Text(
-            text =
-                "CURRENT CONTEXT",
-
-            color =
-                ElectricBlue,
-
-            fontSize =
-                14.sp,
-
-            fontWeight =
-                FontWeight.Bold
+            text = "CURRENT CONTEXT",
+            color = ElectricBlue,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
         )
 
-        Spacer(
-            modifier =
-                Modifier.height(
-                    10.dp
-                )
-        )
+        Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            horizontalArrangement =
-                Arrangement.spacedBy(
-                    12.dp
-                )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = SurfaceNavy
+            )
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
+            ) {
+                Text(
+                    text = "LOCATION",
+                    color = TextSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-            ContextCard(
+                Spacer(modifier = Modifier.height(8.dp))
 
-                title =
-                    "LOCATION",
-
-                value =
-                    "Unknown",
-
-                modifier =
-                    Modifier.weight(
-                        1f
-                    )
-            )
-
-            ContextCard(
-
-                title =
-                    "ACTIVITY",
-
-                value =
-                    "Still",
-
-                modifier =
-                    Modifier.weight(
-                        1f
-                    )
-            )
+                Text(
+                    text = locationDisplay,
+                    color = TextWhite,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
 
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    20.dp
-                )
-        )
-
+        Spacer(modifier = Modifier.height(20.dp))
 
         // =====================================================
         // QUICK ACTIONS
+        // Settings removed; three actions are clickable
         // =====================================================
 
         Text(
-            text =
-                "QUICK ACTIONS",
-
-            color =
-                ElectricBlue,
-
-            fontSize =
-                14.sp,
-
-            fontWeight =
-                FontWeight.Bold
+            text = "QUICK ACTIONS",
+            color = ElectricBlue,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
         )
 
-        Spacer(
-            modifier =
-                Modifier.height(
-                    10.dp
-                )
-        )
+        Spacer(modifier = Modifier.height(10.dp))
 
         Row(
-
-            modifier =
-                Modifier.fillMaxWidth(),
-
-            horizontalArrangement =
-                Arrangement.spacedBy(
-                    10.dp
-                )
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-
             QuickActionCard(
-
-                title =
-                    "Add\nLocation",
-
-                modifier =
-                    Modifier.weight(
-                        1f
-                    )
+                title = "Add\nLocation",
+                modifier = Modifier.weight(1f),
+                onClick = onAddLocationClick
             )
 
             QuickActionCard(
-
-                title =
-                    "Priority\nContacts",
-
-                modifier =
-                    Modifier.weight(
-                        1f
-                    )
+                title = "Priority\nContacts",
+                modifier = Modifier.weight(1f),
+                onClick = onPriorityContactsClick
             )
 
             QuickActionCard(
-
-                title =
-                    "Settings",
-
-                modifier =
-                    Modifier.weight(
-                        1f
-                    )
-            )
-
-            QuickActionCard(
-
-                title =
-                    "Tasks",
-
-                modifier =
-                    Modifier.weight(
-                        1f
-                    )
+                title = "Tasks",
+                modifier = Modifier.weight(1f),
+                onClick = onTasksClick
             )
         }
     }

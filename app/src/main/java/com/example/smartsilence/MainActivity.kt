@@ -1788,7 +1788,28 @@ fun SmartSilenceApp(
                         HomeScreen(
 
                             onDndRuleChange =
-                                onDndRuleChange
+                                onDndRuleChange,
+
+                            locations =
+                                locations,
+
+                            onAddLocationClick = {
+
+                                selectedScreen =
+                                    "Locations"
+                            },
+
+                            onPriorityContactsClick = {
+
+                                selectedScreen =
+                                    "PriorityContacts"
+                            },
+
+                            onTasksClick = {
+
+                                selectedScreen =
+                                    "Tasks"
+                            }
                         )
                     }
 
